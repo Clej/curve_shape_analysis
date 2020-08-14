@@ -12,9 +12,10 @@ Currently, you only need to install the library scikit-fda https://fda.readthedo
 Installation 
 ------------------------
 
+.. code:: bash
 
     git clone https://github.com/Guillaume-Bernard/scikit_fda_shape_analysis.git
-    pip install ./scikit-fda
+    pip install ./scikit_fda_shape_analysis
 
 Reference
 ============

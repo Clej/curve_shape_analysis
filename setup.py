@@ -23,4 +23,4 @@ setup(name='curve_shape_analysis',
           'scikit-learn>=0.20',
           'scipy>=1.3.0',
           'scikit-fda'
-      ],
+      ])

@@ -3,9 +3,6 @@ from setuptools.extension import Extension
 
 
 setup(name='curve_shape_analysis',
-      version=version,
-      description=DOCLINES[1],
-      long_description="\n".join(DOCLINES[3:]),
       url='https://github.com/Guillaume-Bernard/curve_shape_analysis',
       maintainer='Guillaume BERNARD',
       maintainer_email='bernardguiugi@hotmail.fr',

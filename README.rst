@@ -19,7 +19,9 @@ Installation
 Reference
 ============
 Clement Lejeune paper : https://www.sciencedirect.com/science/article/abs/pii/S0950705120302835
+
 Functional Data Analysis with R and MATLAB 2009 Authors: Ramsay, James O., Hooker, Giles, Graves, Spencer
+
 Scikit-fda: https://fda.readthedocs.io/en/stable/
 
 Contributions

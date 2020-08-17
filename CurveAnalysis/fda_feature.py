@@ -7,7 +7,7 @@ from skfda.preprocessing.smoothing.validation import SmoothingParameterSearch, L
 from tqdm.notebook import tqdm
 from scipy.integrate import simps
 from numpy.linalg import norm
-
+from itertools import combinations 
 
 def _calculate_velocity(DX1):
     return [norm(dxi) for dxi in DX1.T]

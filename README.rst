@@ -14,6 +14,7 @@ This package is based on scikit-fda package, see notebooks for examples.
 Installation
 ============
 Currently, you only need to install the library scikit-fda https://fda.readthedocs.io/en/stable/ and its dependencies to use this package
+Note: fda requires Visual studio Build tools as compiler
 
 Installation 
 ------------------------
@@ -25,7 +26,7 @@ Installation
 
 Reference
 ============
-Clement Lejeune paper : https://www.sciencedirect.com/science/article/abs/pii/S0950705120302835
+Clément Lejeune paper : https://www.sciencedirect.com/science/article/abs/pii/S0950705120302835
 
 Functional Data Analysis with R and MATLAB 2009 Authors: Ramsay, James O., Hooker, Giles, Graves, Spencer
 
@@ -34,4 +35,6 @@ Scikit-fda: https://fda.readthedocs.io/en/stable/
 Contributions
 =============
 
+`Python
+https://dblp.uni-trier.de/pid/261/2070.html`_.
 The people involved in the development are Guillaume BERNARD, Clement LEJEUNE and Olivier TESTE

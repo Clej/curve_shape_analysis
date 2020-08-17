@@ -1,4 +1,4 @@
-The objective of this package is to implement some features for functional data analysis (FDA).
+The objective of this package is to implement some shape feature extraction for functional data analysis (FDA).
 
 Documentation
 =============
@@ -8,6 +8,8 @@ FDA aims at studying dataset where each individual **x_i** is a realisation of a
 
 To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).
 The approximation by a known basis of function enable us to estimate its derivatives to capture shape features (e.g curvature,velocity,arc length).
+
+This package is based on scikit-fda package, see notebooks for examples.
 
 Installation
 ============

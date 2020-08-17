@@ -7,7 +7,7 @@ FDA aims at studying dataset where each individual **x_i** is a realisation of a
 
 
 To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).
-The approximation by a known basis of function enable us to estimate its derivatives.
+The approximation by a known basis of function enable us to estimate its derivatives to capture shape features (e.g curvature,velocity,arc length).
 
 Installation
 ============

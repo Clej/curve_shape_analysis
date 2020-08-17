@@ -1,9 +1,12 @@
-The objective of this package is to implement some features for functional data analysis.
+The objective of this package is to implement some features for functional data analysis (FDA).
 
 Documentation
 =============
 
-Incomming
+FDA aims at studying dataset where each individual **x_i** is a realisation of an unknown function **f** which depend on a continuous variable $u$. 
+This continuous variable can be univariate (1 variable) or multivariate (2 or more variables).
+To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).
+By approximating the variable by a know basis of function we can evaluate its derivatives.
 
 Installation
 ============

@@ -36,7 +36,7 @@ Scikit-fda: https://fda.readthedocs.io/en/stable/
 Contributions
 =============
 
-This package is based on `Clément Lejeune <https://dblp.uni-trier.de/pid/261/2070.html>`_. paper : Shape-based outlier detection in multivariate functional data
+This package is based on `Clément Lejeune's <https://dblp.uni-trier.de/pid/261/2070.html>`_ paper : Shape-based outlier detection in multivariate functional data
 
 
 The people involved in the development are Guillaume BERNARD, Clement LEJEUNE and Olivier TESTE

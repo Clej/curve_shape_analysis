@@ -11,7 +11,7 @@ The approximation by a known basis of function enable us to estimate its derivat
 
 This package is based on scikit-fda package, see notebooks for examples.
 .. math:: 
-        ax^2 + bx + c = 0
+        x = {-b \pm \sqrt{b^2 - 4ac} \over 2a}
 Installation
 ============
 Currently, you only need to install the library scikit-fda https://fda.readthedocs.io/en/stable/ and its dependencies to use this package

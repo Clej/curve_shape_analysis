@@ -3,7 +3,7 @@ The objective of this package is to implement some shape feature extraction for 
 Documentation
 =============
 
-FDA aims at studying dataset where each individual $$x_i$$ is a realisation of an unknown function **f** which depend on a continuous variable **u**. 
+FDA aims at studying dataset where each individual $x_i$ is a realisation of an unknown function **f** which depend on a continuous variable **u**. 
 
 As we work with multivariate data each  **x_i** is a vector
 To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).

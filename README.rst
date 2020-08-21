@@ -10,7 +10,8 @@ To approximate this variable we can use a linear combination of functions (e.g B
 The approximation by a known basis of function enable us to estimate its derivatives to capture shape features (e.g curvature,velocity,arc length).
 
 This package is based on scikit-fda package, see notebooks for examples.
-
+.. math:: 
+        ax^2 + bx + c = 0
 Installation
 ============
 Currently, you only need to install the library scikit-fda https://fda.readthedocs.io/en/stable/ and its dependencies to use this package

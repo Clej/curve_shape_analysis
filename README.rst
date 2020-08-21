@@ -6,8 +6,6 @@ Documentation
 FDA aims at studying dataset where each individual **x_i** is a realisation of an unknown function **f** which depend on a continuous variable **u**. 
 
 As we work with multivariate data each  **x_i** is a vector
-This: :raw-latex:`\((x+a)^3\)`
-.. math:: arc\_length(t) = \\int_0^t \\lVert D^1 X(u) \\rVert
 To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).
 The approximation by a known basis of function enable us to estimate its derivatives to capture shape features (e.g curvature,velocity,arc length).
 

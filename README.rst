@@ -21,8 +21,8 @@ Installation
 
 .. code:: bash
 
-    git clone https://github.com/Guillaume-Bernard/scikit_fda_shape_analysis.git
-    pip install ./scikit_fda_shape_analysis
+    git clone https://github.com/Guillaume-Bernard/curve_shape_analysis.git
+    pip install ./curve_shape_analysis
 
 Reference
 ============

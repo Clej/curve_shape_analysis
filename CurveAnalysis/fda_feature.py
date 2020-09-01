@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
 from scipy.integrate import simps, cumtrapz
 from numpy.linalg import norm
 from itertools import combinations 
@@ -40,6 +43,7 @@ class CurveAnalysis:
         self._nObs = self.init_grid.data_matrix.shape[1]
         self._nVar = self.init_grid.data_matrix.shape[2]
         self.coordinates_grids = list(self.init_grid.coordinates)
+        self.coordinate_names = self.init_grid.coordinate_names
         self._smoothed = smoothed
         if self._smoothed==True:
             self.coordinates_grids_dx1 = [grid.derivative(order=1) 
@@ -169,38 +173,140 @@ class CurveAnalysis:
         return FDataGrid(data_matrix=result_matrix,
                          sample_points=self.sample_points, dataset_label="curvature")
 
-    def plot_grids(self):
+    def plot_grids(self, targets=None, target_names=None):
         '''
-            One plot by variable (i.e. dimension)
-            In each plot all time series are plotted
+            One plot by variable (i.e. dimension). In each plot all time series are plotted
+            If targets and target_names are provided, each time series is plotted with a 
+                    color corresponding to its class. 
+                The length of target_names must be equal to the number of unique values in targets
         '''
-        for j in range(self._nVar):
-            labels = self.init_grid.coordinates[j].axes_labels
-            fig, ax = plt.subplots()
-            for i in range(self._nSeries):
-                ax.plot(self.sample_points,
-                        self.coordinates_grids[j].data_matrix[i, :, 0])
-            if labels is not None:
-                ax.set_xlabel(labels[0])
-                ax.set_ylabel(labels[1])
-            plt.show()
+        if targets is None :
+            for j in range(self._nVar):
+                labels = self.init_grid.coordinates[j].axes_labels
+                fig, ax = plt.subplots()
+                for i in range(self._nSeries):
+                    ax.plot(self.sample_points,
+                            self.coordinates_grids[j].data_matrix[i, :, 0])
+                if labels is not None:
+                    ax.set_xlabel(labels[0])
+                    ax.set_ylabel(labels[1])
+        else :
+            if len(target_names) != len(np.unique(targets)):
+                raise ValueError("Length of target_names must be equal to the \
+                                    number of unique values in targets")
+            else :
+                n_targets = len(target_names)
+                if n_targets > 2 :
+                    col_map = [cm.jet(i) for i in np.linspace(0, 1, n_targets)]
+                    colors = {t : col_map[t] for t in targets}
+                    for j in range(self._nVar):
+                        labels = self.init_grid.coordinates[j].axes_labels
+                        fig, ax = plt.subplots()
+                        for i in range(self._nSeries):
+                            ax.plot(self.sample_points,
+                                    self.coordinates_grids[j].data_matrix[i, :, 0], color=colors[targets[i]])
+                        if labels is not None:
+                            ax.set_xlabel(labels[0])
+                            ax.set_ylabel(labels[1])
+                        for k in range(n_targets):
+                            ax.plot([], [], color=col_map[k], label=target_names[k])
+                        ax.legend()
+                else :
+                    target_counts = np.unique(targets, return_counts=True)
+                    maj_class = np.argmax(target_counts[1])
+                    colors = {t : "grey" if t == target_counts[0][maj_class] else "red" for t in targets}
+                    for j in range(self._nVar):
+                        labels = self.init_grid.coordinates[j].axes_labels
+                        fig, ax = plt.subplots()
+                        for i in range(self._nSeries):
+                            ax.plot(self.sample_points,
+                                    self.coordinates_grids[j].data_matrix[i, :, 0], color=colors[targets[i]])
+                        if labels is not None:
+                            ax.set_xlabel(labels[0])
+                            ax.set_ylabel(labels[1])
+                        ax.plot([], [], color="grey", label="inlier")
+                        ax.plot([], [], color="red", label="outlier")
+                        ax.legend()
 
-    def plot_interaction(self):
+    def plot_interaction(self, targets=None, target_names=None):
         '''
             Plot interaction between variables 2 by 2
+            If targets and target_names are provided, each time series is plotted with a 
+                    color corresponding to its class. 
+                The length of target_names must be equal to the number of unique values in targets
         '''
         if self._nVar < 2:
             raise ValueError("Can only plot multivariate data")
         else:
-            combinaisons = [comb for comb in combinations(
-                np.arange(self._nVar), 2)]
-            for comb in combinaisons:
-                fig, ax = plt.subplots()
-                for i in range(self._nSeries):
-                    ax.plot(self.coordinates_grids[comb[0]].data_matrix[i, :, 0],
-                            self.coordinates_grids[comb[1]].data_matrix[i, :, 0])
-                ax.set_xlabel("Variable "+str(comb[0]))
-                ax.set_ylabel("Variable "+str(comb[1]))
-                ax.set_title("Interacton between variable " +
-                             str(comb[0])+" with variable "+str(comb[1]))
-                plt.show()
+            if len(target_names) != len(np.unique(targets)):
+                raise ValueError("Length of target_names must be equal to the \
+                                    number of unique values in targets")
+            else :
+                combinaisons = [comb for comb in combinations(
+                        np.arange(self._nVar), 2)]
+                if targets is None :
+                    for comb in combinaisons:
+                        fig, ax = plt.subplots()
+                        for i in range(self._nSeries):
+                            ax.plot(self.coordinates_grids[comb[0]].data_matrix[i, :, 0],
+                                    self.coordinates_grids[comb[1]].data_matrix[i, :, 0])
+                            if self.coordinate_names is not None :
+                                ax.set_xlabel(str(self.coordinate_names[comb[0]]))
+                                ax.set_ylabel(str(self.coordinate_names[comb[1]]))
+                                ax.set_title("Interaction between " +
+                                            str(self.coordinate_names[comb[0]])+
+                                            " and "+str(self.coordinate_names[comb[1]]))
+                            else :
+                                ax.set_xlabel("Variable "+str(comb[0]))
+                                ax.set_ylabel("Variable "+str(comb[1]))
+                                ax.set_title("Interaction between variable " +
+                                            str(comb[0])+" with variable "+str(comb[1]))
+                else :
+                    n_targets = len(target_names)
+                    if n_targets > 2 :
+                        col_map = [cm.jet(i) for i in np.linspace(0, 1, n_targets)]
+                        colors = {t : col_map[t] for t in targets}
+                        for comb in combinaisons:
+                            fig, ax = plt.subplots()
+                            for i in range(self._nSeries):
+                                ax.plot(self.coordinates_grids[comb[0]].data_matrix[i, :, 0],
+                                        self.coordinates_grids[comb[1]].data_matrix[i, :, 0], 
+                                        color=colors[targets[i]])
+                            if self.coordinate_names is not None :
+                                ax.set_xlabel(str(self.coordinate_names[comb[0]]))
+                                ax.set_ylabel(tr(self.coordinate_names[comb[1]]))
+                                ax.set_title("Interaction between " +
+                                            str(self.coordinate_names[comb[0]])+
+                                            " and "+str(self.coordinate_names[comb[1]]))
+                            else :
+                                ax.set_xlabel("Variable "+str(comb[0]))
+                                ax.set_ylabel("Variable "+str(comb[1]))
+                                ax.set_title("Interaction between variable " +
+                                            str(comb[0])+" with variable "+str(comb[1]))
+                            for k in range(n_targets):
+                                ax.plot([], [], color=col_map[k], label=target_names[k])
+                            ax.legend()
+                    else :
+                        target_counts = np.unique(targets, return_counts=True)
+                        maj_class = np.argmax(target_counts[1])
+                        colors = {t : "grey" if t == target_counts[0][maj_class] else "red" for t in targets}
+                        for comb in combinaisons:
+                            fig, ax = plt.subplots()
+                            for i in range(self._nSeries):
+                                ax.plot(self.coordinates_grids[comb[0]].data_matrix[i, :, 0],
+                                        self.coordinates_grids[comb[1]].data_matrix[i, :, 0], 
+                                        color=colors[targets[i]])
+                            if self.coordinate_names is not None :
+                                ax.set_xlabel(str(self.coordinate_names[comb[0]]))
+                                ax.set_ylabel(str(self.coordinate_names[comb[1]]))
+                                ax.set_title("Interaction between " +
+                                            str(self.coordinate_names[comb[0]])+
+                                            " with "+str(self.coordinate_names[comb[1]]))
+                            else :
+                                ax.set_xlabel("Variable "+str(comb[0]))
+                                ax.set_ylabel("Variable "+str(comb[1]))
+                                ax.set_title("Interaction between variable " +
+                                            str(comb[0])+" with variable "+str(comb[1]))
+                            ax.plot([], [], color="grey", label="inlier")
+                            ax.plot([], [], color="red", label="outlier")
+                            ax.legend()

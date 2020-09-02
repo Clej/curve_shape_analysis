@@ -101,7 +101,7 @@ class CurveAnalysis:
             basis_representation=self.coordinates_grids[i].copy().to_basis(basis=smoother[i].basis)
             self.coefficients.append(basis_representation.coefficients)
             self.coordinates_grids_dx1.append(basis_representation.derivative(order=1))
-            self.coordinates_grids_dx1.append(basis_representation.derivative(order=2))
+            self.coordinates_grids_dx2.append(basis_representation.derivative(order=2))
         self.coefficients=np.array(self.coefficients)
         if return_history:
             return np.array(history)

@@ -33,7 +33,7 @@ def _calculate_curvature(DX1, DX2):
     return [np.sqrt(res[i])/(norm(DX1[:, i])**3) for i in range(n)]
 
 
-class CurveAnalysis_test:
+class CurveAnalysis:
 
     def __init__(self, grid: FDataGrid):
         self.init_grid = grid.copy()

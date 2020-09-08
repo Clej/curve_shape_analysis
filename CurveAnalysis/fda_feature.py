@@ -274,7 +274,7 @@ class CurveAnalysis:
                                         color=colors[targets[i]])
                             if self.coordinate_names is not None :
                                 ax.set_xlabel(str(self.coordinate_names[comb[0]]))
-                                ax.set_ylabel(tr(self.coordinate_names[comb[1]]))
+                                ax.set_ylabel(str(self.coordinate_names[comb[1]]))
                                 ax.set_title("Interaction between " +
                                             str(self.coordinate_names[comb[0]])+
                                             " and "+str(self.coordinate_names[comb[1]]))

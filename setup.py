@@ -22,5 +22,8 @@ setup(name='curve_shape_analysis',
           'scikit-datasets[cran]>=0.1.24',
           'scikit-learn>=0.20',
           'scipy>=1.3.0',
+          'POT',
+          'pymanopt',
+          'autograd',
           'scikit-fda'
       ])

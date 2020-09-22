@@ -2,6 +2,7 @@ import numpy as np
 from itertools import combinations
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import scipy.stats
 # metrics
 from sklearn.metrics import roc_auc_score, auc, roc_curve
 from sklearn.metrics import precision_recall_curve, average_precision_score
@@ -13,6 +14,9 @@ from ot.dr import wda
 # curve analysis
 from CurveAnalysis import fda_feature
 from skfda.representation.grid import FDataGrid
+# directional outlier detector
+from skfda.exploratory.depth import outlyingness_to_depth
+from skfda.exploratory.outliers import DirectionalOutlierDetector
 
 def _evaluate(scores, pred_labels, true_labels, out_code=-1):
     """Compute evaluation metrics for a binary classifier (part. outlier detection)
@@ -280,9 +284,9 @@ class CustomClassifierWDA():
     def fit(self, fd_train: FDataGrid, y_train: np.array):
         """Fits the classifier using median of each class of the training samples 
         Arguments :
-            - X_train : training data - ndarray of shape (n_points, n_dim)
+            - fd_train : training data - FDataGrid
             - y_train : training labels - ndarray of shape (n_samples,)"""
-        X_train = fd_train.data_matrix
+        X_train = np.transpose(fd_train.data_matrix, axes=(0,2,1))
         # compute mean of each class and label them
         mean_outliers = np.mean(X_train[np.where(y_train==1)[0]], axis=0).transpose()
         mean_inliers = np.mean(X_train[np.where(y_train==0)[0]], axis=0).transpose()
@@ -306,14 +310,14 @@ class CustomClassifierWDA():
         self.fd_test = fd_test
         X_test = self.fd_test.data_matrix
         # project test samples
-        test_proj = np.empty((len(X_test), X_test.shape[2], self.p))
+        test_proj = np.empty((len(X_test), X_test.shape[1], self.p))
         for i in range(len(X_test)):
-            test_proj[i] = self.projwda(X_test[i].transpose())
+            test_proj[i] = self.projwda(X_test[i])
         # predict labels
         self.y_pred = _predict_label_rule(test_proj, self.clf, self.contamination, self.out_label)[0]
         return self.y_pred
 
-    def score_samples(self, fd_test: FDataGrid):
+    def score_samples(self, fd_test: FDataGrid, return_threshold=False):
         """Predict scores for each sample in X_test using scoring function defined in predict_label_rule
         Arguments :
             - X_test : testing samples - ndarray of shape (n_samples, n_points, n_dim)
@@ -322,17 +326,21 @@ class CustomClassifierWDA():
         self.fd_test = fd_test
         X_test = self.fd_test.data_matrix
         # project test samples
-        test_proj = np.empty((len(X_test), X_test.shape[2], self.p))
+        test_proj = np.empty((len(X_test), X_test.shape[1], self.p))
         for i in range(len(X_test)):
-            test_proj[i] = self.projwda(X_test[i].transpose())
+            test_proj[i] = self.projwda(X_test[i])
         self.scores = _predict_label_rule(test_proj, self.clf, self.contamination, self.out_label)[1]
         self.is_scored = True
-        return self.scores
+        if return_threshold :
+            self.threshold = np.percentile(self.scores, (1-self.contamination)*100)
+            return self.scores, self.threshold
+        else :
+            return self.scores
 
     def plot_scores(self, fd_test: FDataGrid, targets=None, target_names=None):
         
         # score the samples and get the threshold value
-        self.scores = self.score_samples(fd_test)
+        self.scores, self.threshold = self.score_samples(fd_test, return_threshold=True)
 
         order = np.argsort(self.scores)
         ranks = np.argsort(order)
@@ -349,8 +357,8 @@ class CustomClassifierWDA():
         else :
             plt.scatter(range(len(self.scores)), S_sort, color="grey")
         
-        # plt.hlines(y=self.threshold, xmin=0, xmax=len(self.scores), linestyle='dashed', label="threshold")
-        # plt.legend(loc='best')
+        plt.hlines(y=self.threshold, xmin=0, xmax=len(self.scores), linestyle='dashed', label="threshold")
+        plt.legend(loc='best')
         plt.title("Anomaly scores of the Test curves with outliers' colored")
         plt.xlabel("Index of sorted curves")
         plt.ylabel("Scores")
@@ -376,3 +384,147 @@ class CustomClassifierWDA():
             self.y_pred = self.predict(fd_test)
 
         return _evaluate(self.scores, self.y_pred, y_test)
+
+
+##################################################################################
+##################### DIRECTIONAL OUTLYINGNESS DETECTOR ##########################
+##################################################################################
+
+def _SDO_multivariate(fd, pointwise=True):
+    """Returns the Stagel-Donoho outlyingness for multivariate data.
+    $$SDO(X(t)) = sup_{\lVert u\rVert=1}\frac{\lVert u^TX(t) - median(u^TX(t))\rVert}{MAD(u^TX(t))}$$
+    
+    In dimension 1 (already implemented in scikit-fda), the result is exactly computed ;
+    but in higher dimensions, we have to compute this maximum.
+    
+    We use the parametric representation of the unit sphere in R^p and 
+    choose a set of candidates to compute the value of this supremum.
+    If $X = (x_1, x_2, \dots, x_p)$ is in the unit sphere in $R^p$, then it exists $\phi_1, \dots, \phi_{p-2}\in[0,\pi]$
+        and $\phi_{p-1}\in[0,2\pi[$ such that :
+    - $x_1 = \cos(\phi_1)$
+    - $x_2 = \sin(\phi_1)\cos(\phi_2)$
+    - ...
+    - $x_{p-1} = \sin(\phi_1)\dots\sin(\phi_{p-2})\cos(\phi_{p-1})$
+    - $x_p = \sin(\phi_1)\dots\sin(\phi_{p-1})$
+    """
+    X = fd.data_matrix 
+    print("shape of the data",X.shape)
+    
+    p = X.shape[2] # dimension of the multivariate data
+    
+    # creation of the set of candidates for u
+    u = np.empty((p, 100))
+    for dim in range(1, p):
+        phi = np.random.uniform(0, np.pi, (dim,100))
+        if dim==1:
+            u[dim-1] = np.cos(phi)
+        else :
+            prod_sin = 1
+            for j in range(dim-1):
+                 prod_sin *= np.sin(phi[j])
+            u[dim-1] = prod_sin*np.cos(phi[dim-1])
+    prod_sin_last = 1
+    phi_last = np.random.uniform(0, 2*np.pi, (p,100))
+    for j in range(p):
+        prod_sin_last *= np.sin(phi_last[j])
+    u[p-1] = prod_sin_last
+    
+    u = u.transpose()
+                 
+    SDO = np.empty((X.shape[0], X.shape[1]))
+    # for each $t$, find the value of the outlyingness thanks to the set of candidates from $u$
+    for t in range(X.shape[1]):
+
+        uX = np.dot(u, X[:,t,:].transpose()).transpose()
+        SDO_candidates = np.abs(uX - np.median(uX, axis=0)) / \
+                            scipy.stats.median_abs_deviation(uX, axis=0, scale=1 / 1.4826)
+        SDO[:,t] = np.max(SDO_candidates, axis=1)
+        
+    return SDO
+
+def _PD_multivariate(X, *, pointwise=True):
+    """Returns the projection depth for multivariate data.
+
+    The projection depth is the depth function associated with the
+    Stagel-Donoho outlyingness.
+    """
+
+    depth = outlyingness_to_depth(_SDO_multivariate)
+
+    return depth(X, pointwise=pointwise)
+
+
+def _evaluate_without_scores(pred_labels, true_labels, out_code=-1):
+    """Compute evaluation metrics for a binary classifier (part. outlier detection)
+    Arguments:
+        - pred_labels : labels of each sample - out_code for outliers
+        - true_labels : true labels of the samples : 1 for outliers, 0 for inliers
+        - out_code : code for outliers : -1 in this library
+    Returns :
+        - metrics : dictionary with the following metrics :
+            - TP : number of True Positive predictions
+            - FP : number of False Postive predictions
+            - TN : number of True Negative predictions
+            - FN : number of False Negative predictions
+            - Precision : TP / (TP+FP)
+            - Recall : TP / (TP+FN)
+            - Accuracy : (TP+TN) / (TP+TN+FP+FN)
+            - Balanced accuracy : 1/2 * (TP/(TP+FN) + TN/(FP+TN))
+    """
+    pred = np.where(pred_labels==out_code)[0]
+    true_outliers = np.where(true_labels==1)[0]
+    false_outliers = np.where(true_labels==0)[0]
+    
+    metrics = {}
+    metrics['TP'] = len([i for i in pred if i in true_outliers])
+    metrics['FP'] = len([i for i in pred if i not in true_outliers])
+    metrics['TN'] = len([i for i in false_outliers if i not in pred])
+    metrics['FN'] = len([i for i in true_outliers if i not in pred])
+    metrics['Precision'] = metrics['TP'] / (metrics['TP'] + metrics['FP'])
+    metrics['Recall'] = metrics['TP'] / (metrics['TP'] + metrics['FN'])
+    if metrics['Precision']==0 and metrics['Recall']==0:
+        metrics["f1-score"] = 0
+    else:
+        metrics["f1-score"] = 2*(metrics["Precision"] * metrics["Recall"])/(metrics["Precision"] + metrics["Recall"])
+    metrics['Accuracy'] = (metrics['TP'] + metrics['TN']) \
+                            / (metrics['TP'] + metrics['TN'] \
+                               + metrics['FP'] + metrics['FN'])
+    metrics['BA'] = 1/2 * (metrics['TP'] / (metrics['TP'] + metrics['FN']) \
+                           + metrics['TN'] / (metrics['FP'] + metrics['TN']))    
+    return metrics
+
+class DirOutlyingnessOutlierDetector():
+    """Directional Outlyingness Detector using Projection Depth.
+    Adapted from DirectionalOutlierDetector of scikit-fda to make it able to work with multivariate functional data
+    Attributes :
+        - fit_predict : call fit_predict from scikit-fda method with projection depth : implemented in skfda for 1D case, 
+            implemented in this file for multivariate case
+        - eval_performances : only evaluation metrics computed from predictions are computed since scores are not defined for this method
+        """
+    def __init__(self, alpha=0.993):
+        self.alpha = alpha
+    def fit_predict(self, fd):
+        if fd.dim_codomain == 1 :
+            # simple call to the detector from scikit-fda with default depth
+            self.model = DirectionalOutlierDetector(alpha=self.alpha)
+        else :
+            # call to the detector from scikit-fda with adapted projection depth
+            self.model = DirectionalOutlierDetector(depth_method=_PD_multivariate, alpha=self.alpha)
+        self.fd_test = fd
+        self.y_pred = self.model.fit_predict(self.fd_test)
+        return self.y_pred
+    
+    def eval_performances(self, fd_test: FDataGrid, y_test: np.array):
+        """Evaluate the performances of the model in a given testing set. 
+        Uses the function _evaluate defined as the beginning of the module"""
+
+        if hasattr(self, 'fd_test') :
+            if self.fd_test != fd_test :
+                self.fd_test = fd_test
+                self.y_pred = self.fit_predict(fd_test)
+
+        else :
+            self.fd_test = fd_test
+            self.y_pred = self.fit_predict(fd_test)
+
+        return _evaluate_without_scores(self.y_pred, y_test)

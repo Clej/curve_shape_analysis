@@ -17,6 +17,7 @@ from skfda.representation.grid import FDataGrid
 # directional outlier detector
 from skfda.exploratory.depth import outlyingness_to_depth
 from skfda.exploratory.outliers import DirectionalOutlierDetector
+from skfda.exploratory.outliers._directional_outlyingness import directional_outlyingness_stats
 
 def _evaluate(scores, pred_labels, true_labels, out_code=-1):
     """Compute evaluation metrics for a binary classifier (part. outlier detection)
@@ -304,7 +305,7 @@ class CustomClassifierWDA():
     def predict(self, fd_test: FDataGrid):
         """Predict labels for each sample in X_test using decision rule defined in predict_label_rule and a contamination level
         Arguments :
-            - X_test : testing samples - ndarray of shape (n_samples, n_points, n_dim)
+            - fd_test : FDataGrid of testing samples - its data matrix is an ndarray of shape (n_samples, n_points, n_dim)
         Returns :
             - pred : prediction using the specified decision rule"""
         self.fd_test = fd_test
@@ -320,7 +321,7 @@ class CustomClassifierWDA():
     def score_samples(self, fd_test: FDataGrid, return_threshold=False):
         """Predict scores for each sample in X_test using scoring function defined in predict_label_rule
         Arguments :
-            - X_test : testing samples - ndarray of shape (n_samples, n_points, n_dim)
+            - fd_test : FDataGrid of testing samples - its data matrix is an ndarray of shape (n_samples, n_points, n_dim)
         Returns :
             - prob : scores of the samples using the specified scoring in predict_label_rule"""
         self.fd_test = fd_test
@@ -336,6 +337,44 @@ class CustomClassifierWDA():
             return self.scores, self.threshold
         else :
             return self.scores
+
+    def plot_projection(self, fd : FDataGrid, y=None, y_names=None):
+        """Projects the samples in fd in the p-dimensional space used for Wasserstein Discriminant Analysis and plot them, according to their true labels y
+        Arguments :
+            - fd : FDataGrid whose elements have to be projected
+            - y : true labels of the elements if possible
+        Returns :
+            - Plots the projected samples, with different values depending on the target
+        """
+        X = fd.data_matrix
+        # project test samples
+        projection = np.empty((len(X), X.shape[1], self.p))
+        for i in range(len(X)):
+            projection[i] = self.projwda(X[i])
+        ca_proj = fda_feature.CurveAnalysis(FDataGrid(projection, sample_points=fd.sample_points[0]))
+        if self.p == 1 :
+            ca_proj.plot_grids(targets=y, target_names=y_names)
+        else :
+            ca_proj.plot_interaction(targets=y, target_names=y_names)
+
+
+    def plot_detection(self, fd_test: FDataGrid, plot_interaction: bool = False) :
+        if hasattr(self, 'fd_test') and self.fd_test == fd_test :
+            # prediction or scoring have already been done in this testing set
+            if not hasattr(self, 'y_pred') :
+                # predictions haven't been done in this testing set
+                self.y_pred = self.predict(fd_test)
+        else :
+            self.y_pred = self.predict(fd_test)
+        curve_analysis = fda_feature.CurveAnalysis(fd_test)
+        if not plot_interaction :
+            targets = np.array(self.y_pred, dtype='int')
+            targets[targets==-1] = 0
+            curve_analysis.plot_grids(targets=targets, target_names=["outlier","inlier"])
+        else : 
+            targets = np.array(self.y_pred, dtype='int')
+            targets[targets==-1] = 0
+            curve_analysis.plot_interaction(targets=targets, target_names=["outlier","inlier"])
 
     def plot_scores(self, fd_test: FDataGrid, targets=None, target_names=None):
         
@@ -408,7 +447,6 @@ def _SDO_multivariate(fd, pointwise=True):
     - $x_p = \sin(\phi_1)\dots\sin(\phi_{p-1})$
     """
     X = fd.data_matrix 
-    print("shape of the data",X.shape)
     
     p = X.shape[2] # dimension of the multivariate data
     
@@ -493,8 +531,8 @@ def _evaluate_without_scores(pred_labels, true_labels, out_code=-1):
                            + metrics['TN'] / (metrics['FP'] + metrics['TN']))    
     return metrics
 
-class DirOutlyingnessOutlierDetector():
-    """Directional Outlyingness Detector using Projection Depth.
+class DirOutlierDetector():
+    """Directional Outlier Detector using Projection Depth.
     Adapted from DirectionalOutlierDetector of scikit-fda to make it able to work with multivariate functional data
     Attributes :
         - fit_predict : call fit_predict from scikit-fda method with projection depth : implemented in skfda for 1D case, 
@@ -513,6 +551,129 @@ class DirOutlyingnessOutlierDetector():
         self.fd_test = fd
         self.y_pred = self.model.fit_predict(self.fd_test)
         return self.y_pred
+
+    def plot_detection(self, fd_test: FDataGrid, plot_interaction: bool = False) :
+        if hasattr(self, 'fd_test') and self.fd_test == fd_test :
+            # prediction or scoring have already been done in this testing set
+            if not hasattr(self, 'y_pred') :
+                # predictions haven't been done in this testing set
+                self.y_pred = self.predict(fd_test)
+        else :
+            self.y_pred = self.predict(fd_test)
+        curve_analysis = fda_feature.CurveAnalysis(fd_test)
+        if not plot_interaction :
+            targets = np.array(self.y_pred, dtype='int')
+            targets[targets==-1] = 0
+            curve_analysis.plot_grids(targets=targets, target_names=["outlier","inlier"])
+        else : 
+            targets = np.array(self.y_pred, dtype='int')
+            targets[targets==-1] = 0
+            curve_analysis.plot_interaction(targets=targets, target_names=["outlier","inlier"])
+
+    def DirOutlierStats(self, fd: FDataGrid):
+        """Returns features used by the detector.
+        Arguments :
+            - fd : FDataGrid
+        Returns :
+            - A dictionary with the value of
+                - the mean directional outlyingness
+                - the variation directional outlyingness
+        """
+        if fd.dim_codomain == 1 :
+            SO_stats = directional_outlyingness_stats(fd)
+        else :
+            SO_stats = directional_outlyingness_stats(fd, depth_method=_PD_multivariate)
+        return {'Mean Outlyingness' : SO_stats.mean_directional_outlyingness,
+                'Variational Outlyingness' : SO_stats.variation_directional_outlyingness}
+
+    def MSplot(self, fd, variables, y=None, y_names=None):
+        """Plots the Magnitude-Shape plot of some variables in a multivariate functional data
+        Arguments :
+            - fd : FDataGrid
+            - variables : list of dimensions whose MS-plot has to be computed (list of integers)
+            Example : 
+                - if you want to plot the MS-plot of X_1, you put [0] in variables ; 
+                - if you want to plot the MS-plot of (X_1, X_2), you put [0,1])
+        Returns : 
+            - Plots the MS-plot of variables"""
+        dict_stats = self.DirOutlierStats(fd)
+        MO, VO = dict_stats['Mean Outlyingness'], dict_stats['Variational Outlyingness']
+        if len(variables) > 2 :
+            raise NotImplementedError('We cannot plot Magnitude-Shape of more than 2 variables ; otherwise the plot is going to be in more than 4D...')
+        elif len(variables) == 2 :
+            ax = plt.subplot(111, projection='3d')
+            if y is None :
+                ax.scatter(MO[:,variables[0]], MO[:,variables[1]], VO)
+                ax.set_xlabel("MO($X_{}$)".format(variables[0]+1))
+                ax.set_ylabel("MO($X_{}$)".format(variables[1]+1))
+                ax.set_zlabel("VO")
+                ax.set_title("Magnitude-Shape plot of $X_{}$ and $X_{}$".format(variables[0]+1, variables[1]+1))
+                plt.show()
+            else :
+                n_targets = len(y_names)
+                if n_targets > 2:
+                    col_map = [cm.jet(i) for i in np.linspace(0, 1, n_targets)]
+                    colors = [col_map[t] for t in y]
+                    ax.scatter(MO[:,variables[0]], MO[:,variables[1]], VO, color=colors)
+                    ax.set_xlabel("MO($X_{}$)".format(variables[0]+1))
+                    ax.set_ylabel("MO($X_{}$)".format(variables[1]+1))
+                    ax.set_zlabel("VO")
+                    ax.set_title("Magnitude-Shape plot of $X_{}$ and $X_{}$".format(variables[0]+1, variables[1]+1))
+                    for k in range(n_targets):
+                        ax.plot([], [], [], color=col_map[k],
+                                label=y_names[k])
+                    ax.legend()
+                    plt.show()
+                else :
+                    target_counts = np.unique(y, return_counts=True)
+                    maj_class = np.argmax(target_counts[1])
+                    colors = ["grey" if t == target_counts[0][maj_class] else "red" for t in y]
+                    ax.scatter(MO[:,variables[0]], MO[:,variables[1]], VO, color=colors)
+                    ax.set_xlabel("MO($X_{}$)".format(variables[0]+1))
+                    ax.set_ylabel("MO($X_{}$)".format(variables[1]+1))
+                    ax.set_zlabel("VO")
+                    ax.set_title("Magnitude-Shape plot of $X_{}$ and $X_{}$".format(variables[0]+1, variables[1]+1))
+                    ax.plot([], [], [], color="grey", label="inlier")
+                    ax.plot([], [], [], color="red", label="outlier")
+                    ax.legend()
+                    plt.show()
+
+        elif len(variables) == 1:
+            if y is None :
+                plt.scatter(MO[:,variables[0]], VO)
+                plt.xlabel("MO($X_{}$)".format(variables[0]+1))
+                plt.ylabel("VO")
+                plt.title("Magnitude-Shape plot of $X_{}$".format(variables[0]+1))
+            else :
+                n_targets = len(y_names)
+                if n_targets > 2:
+                    col_map = [cm.jet(i) for i in np.linspace(0, 1, n_targets)]
+                    colors = [col_map[t] for t in y]
+
+                    plt.scatter(MO[:,variables[0]], VO,color=colors)
+                    plt.xlabel("MO($X_{}$)".format(variables[0]+1))
+                    plt.ylabel("VO")
+                    plt.title("Magnitude-Shape plot of $X_{}$".format(variables[0]+1))
+                    for k in range(n_targets):
+                        plt.plot([], [], color=col_map[k],
+                                label=y_names[k])
+                    plt.legend()
+                    plt.show()
+                else :
+                    target_counts = np.unique(y, return_counts=True)
+                    maj_class = np.argmax(target_counts[1])
+                    colors = ["grey" if t == target_counts[0][maj_class] else "red" for t in y]
+                    plt.scatter(MO[:,variables[0]], VO, color=colors)
+                    plt.xlabel("MO($X_{}$)".format(variables[0]+1))
+                    plt.ylabel("VO")
+                    plt.title("Magnitude-Shape plot of $X_{}$".format(variables[0]+1))
+                    plt.plot([], [], color="grey", label="inlier")
+                    plt.plot([], [], color="red", label="outlier")
+                    plt.legend()
+                    plt.show()
+        else:
+            raise ValueError('You need to pass at least one integer in variables argument...')
+
     
     def eval_performances(self, fd_test: FDataGrid, y_test: np.array):
         """Evaluate the performances of the model in a given testing set. 

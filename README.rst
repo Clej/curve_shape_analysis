@@ -33,8 +33,4 @@ References
 
 Contributions
 =============
-
-This package is based on `Clément Lejeune's <https://dblp.uni-trier.de/pid/261/2070.html>`_ paper : Shape-based outlier detection in multivariate functional data
-
-
-The people involved in the development are Guillaume BERNARD, Clément LEJEUNE, Sandra FERRIERES and Olivier TESTE
+The people involved in the development are Guillaume Bernard, Clément Lejeune, Sandra Ferrieres and Olivier Teste.

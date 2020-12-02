@@ -31,6 +31,6 @@ References
 - Functional Data Analysis with R and MATLAB 2009 Authors: Ramsay, James O., Hooker, Giles, Graves, Spencer
 - Scikit-fda: https://fda.readthedocs.io/en/stable/
 
-Contributions
+Contributors
 =============
 The people involved in the development are Guillaume Bernard, Clément Lejeune, Sandra Ferrieres and Olivier Teste.

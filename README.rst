@@ -3,18 +3,18 @@ The objective of this package is to implement some shape feature extraction for 
 Documentation
 =============
 
-FDA aims at studying dataset where each individual **x_i** is a realisation of an unknown function **f** which depend on a continuous variable **u**. 
+FDA aims at analyzing a dataset where each sample **x_i** is a realisation of an unknown function **f** which depends on a continuous variable **t**. 
 
-As we work with multivariate data each  **x_i** is a vector
-To approximate this variable we can use a linear combination of functions (e.g Bspline, Fourier).
-The approximation by a known basis of function enable us to estimate its derivatives to capture shape features (e.g curvature,velocity,arc length).
+As we work with multivariate data, each  **x_i** is a vector containing samples of **f** along **t**, where **f** may be scalar- or vector-valued.
+**x_i** is approximated by a functional variable with linear combination of orthogonal basis functions (e.g B-splines, Fourier, wavelets).
+Such an approximation enables to estimate derivatives to compute shape features (e.g curvature, velocity, arc length).
 
-This package is based on scikit-fda package, see notebooks for examples.
+This package is based on scikit-fda, see notebooks for examples.
 
 Installation
 ============
-Currently, you only need to install the library scikit-fda https://fda.readthedocs.io/en/stable/ and its dependencies to use this package
-Note: fda requires Visual studio Build tools as compiler
+You only need to install the library scikit-fda https://fda.readthedocs.io/en/stable/ and its dependencies to use this package
+Note: scikit-fda requires Visual studio Build tools as C++ compiler.
 
 Installation 
 ------------------------

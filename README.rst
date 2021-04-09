@@ -6,10 +6,10 @@ Documentation
 FDA aims at analyzing a dataset where each sample **x_i** is a realisation of an unknown function **f** which depends on a continuous variable **t**. 
 
 As we work with multivariate data, each  **x_i** is a vector containing samples of **f** along **t**, where **f** may be scalar- or vector-valued.
-**x_i** is approximated by a functional variable with linear combination of orthogonal basis functions (e.g B-splines, Fourier, wavelets).
-Such an approximation enables to estimate derivatives to compute shape features (e.g curvature, velocity, arc length).
+In FDA, **x_i** is approximated by a functional variable written as the linear combination spaned by an orthogonal functional basis (e.g B-splines, Fourier, wavelets).
+In our context, we use such an approximation as a building block to ease the computation of (functional) shaped-based features (e.g curvature, velocity, arc length) that require accurate estimates of derivatives and integrals.
 
-This package is based on scikit-fda, see notebooks for examples.
+This package is based on Scikit-fda, see notebooks for examples.
 
 Installation
 ============
